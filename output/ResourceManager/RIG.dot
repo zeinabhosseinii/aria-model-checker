@@ -1,0 +1,7 @@
+graph RIG {
+  rankdir=LR;
+  "rm" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "am1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "am2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "am1" -- "am2";
+}

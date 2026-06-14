@@ -1,0 +1,7 @@
+graph RIG {
+  rankdir=LR;
+  "Controller" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit1" -- "Unit2";
+}

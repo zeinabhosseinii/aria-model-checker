@@ -1,0 +1,13 @@
+digraph HRG {
+  rankdir=TB;
+  "G0" [shape=box, style=filled, fillcolor="#90EE90", label="Group 1\nHub"];
+  "G1" [shape=box, style=filled, fillcolor="#90EE90", label="Group 2\nPrimaryRelay"];
+  "G2" [shape=box, style=filled, fillcolor="#90EE90", label="Group 3\nSecondaryRelay"];
+  "G3" [shape=box, style=filled, fillcolor="#90EE90", label="Group 4\nPrimarySrc"];
+  "G4" [shape=box, style=filled, fillcolor="#90EE90", label="Group 5\nSecondarySrc"];
+  "G5" [shape=box, style=filled, fillcolor="#90EE90", label="Group 6\nBootstrapper"];
+  "G1" -> "G0";
+  "G2" -> "G0";
+  "G3" -> "G1";
+  "G4" -> "G2";
+}

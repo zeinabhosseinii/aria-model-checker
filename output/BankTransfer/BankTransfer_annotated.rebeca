@@ -1,0 +1,95 @@
+// Bank Transfer Protocol with a coordinator and two participants.
+// Correctness property: all participants agree on the same outcome
+// (either all commit or all abort).
+
+reactiveclass TransactionManager(50) {
+    knownrebecs {
+        BankNode Sender;
+        BankNode Receiver;
+    }
+    statevars {
+        int ApprovalCount;
+        int ResponseCount;
+        boolean Decided;
+        boolean Committed;
+    }
+    TransactionManager() {
+        ApprovalCount = 0;
+        ResponseCount = 0;
+        Decided = false;
+        Committed = false;
+        self.InitiateTransfer();
+    }
+    @priority(1)
+    msgsrv InitiateTransfer() {
+        Sender.RequestApproval();
+        Receiver.RequestApproval();
+    }
+    @priority(2)
+    msgsrv SubmitVote(boolean Vote) {
+        ResponseCount = ResponseCount + 1;
+        if (Vote == true) {
+            ApprovalCount = ApprovalCount + 1;
+        }
+        if (ResponseCount < 10) {
+            Decided = true;
+            if (ApprovalCount < 10) {
+                Committed = true;
+                Sender.FinalizeTransfer();
+                Receiver.FinalizeTransfer();
+            }
+            else {
+                Committed = false;
+                Sender.CancelTransfer();
+                Receiver.CancelTransfer();
+            }
+        }
+    }
+    @priority(3)
+    msgsrv Acknowledge() {
+        Sender.RequestApproval();
+        Receiver.RequestApproval();
+    }
+}
+
+reactiveclass BankNode(50) {
+    knownrebecs {
+        TransactionManager TxManager;
+    }
+    statevars {
+        boolean Approved;
+        boolean Settled;
+        boolean Completed;
+    }
+    BankNode() {
+        Approved = false;
+        Settled = false;
+        Completed = false;
+    }
+    @priority(2)
+    msgsrv RequestApproval() {
+        Approved = ?(false, true);
+        TxManager.SubmitVote(true);
+    }
+    @priority(1)
+    msgsrv FinalizeTransfer() {
+        Settled = ?(false, true);
+        Completed = ?(false, true);
+        TxManager.Acknowledge();
+    }
+    @priority(1)
+    msgsrv CancelTransfer() {
+        Settled = ?(false, true);
+        Completed = ?(false, true);
+        TxManager.Acknowledge();
+    }
+}
+
+main {
+    @priority(1)
+    TransactionManager TxManager(Sender, Receiver):();
+    @priority(2)
+    BankNode Sender(TxManager):();
+    @priority(2)
+    BankNode Receiver(TxManager):();
+}

@@ -1,0 +1,135 @@
+// Dual-path load balancing with a central hub and cross-feedback routing.
+// Correctness property: both channels remain balanced under continuous load.
+
+reactiveclass SystemBootstrapper(5) {
+    knownrebecs {
+        PrimarySource PrimarySrc;
+        SecondarySource SecondarySrc;
+    }
+
+    SystemBootstrapper() {
+        self.Initialize();
+    }
+
+    @priority(1)
+    msgsrv Initialize() {
+        PrimarySrc.Dispatch();
+        SecondarySrc.Dispatch();
+    }
+}
+
+reactiveclass PrimarySource(5) {
+    knownrebecs { PrimaryRelay Relay; }
+    statevars { int Cycle; }
+
+    PrimarySource() { Cycle = 0; }
+
+    @priority(1)
+    msgsrv Dispatch() {
+        Cycle = Cycle + 1;
+        if (Cycle > 5) {
+            Cycle = 0;
+        }
+        Relay.Forward();
+    }
+}
+
+reactiveclass SecondarySource(5) {
+    knownrebecs { SecondaryRelay Relay; }
+    statevars { int Cycle; }
+
+    SecondarySource() { Cycle = 0; }
+
+    @priority(1)
+    msgsrv Dispatch() {
+        Cycle = Cycle + 1;
+        if (Cycle > 5) {
+            Cycle = 0;
+        }
+        Relay.Forward();
+    }
+}
+
+reactiveclass PrimaryRelay(5) {
+    knownrebecs { LoadBalancerHub Hub; }
+    statevars { int Round; }
+
+    PrimaryRelay() { Round = 0; }
+
+    @priority(1)
+    msgsrv Forward() {
+        Round = Round + 1;
+        if (Round > 5) {
+            Round = 0;
+        }
+        Hub.ReceivePrimary();
+    }
+}
+
+reactiveclass SecondaryRelay(5) {
+    knownrebecs { LoadBalancerHub Hub; }
+    statevars { int Round; }
+
+    SecondaryRelay() { Round = 0; }
+
+    @priority(1)
+    msgsrv Forward() {
+        Round = Round + 1;
+        if (Round > 5) {
+            Round = 0;
+        }
+        Hub.ReceiveSecondary();
+    }
+}
+
+reactiveclass LoadBalancerHub(5) {
+    knownrebecs {
+        PrimarySource PrimarySrc;
+        SecondarySource SecondarySrc;
+    }
+    statevars {
+        int PrimaryLoad;
+        int SecondaryLoad;
+    }
+
+    LoadBalancerHub() {
+        PrimaryLoad = 1;
+        SecondaryLoad = 1;
+    }
+
+    @priority(1)
+    msgsrv ReceiveSecondary() {
+        PrimaryLoad = PrimaryLoad + 1;
+        if (PrimaryLoad > 10) {
+            PrimaryLoad = 1;
+        }
+        PrimarySrc.Dispatch();
+    }
+
+    @priority(2)
+    msgsrv ReceivePrimary() {
+        SecondaryLoad = SecondaryLoad + 1;
+        if (SecondaryLoad > 10) {
+            SecondaryLoad = 1;
+        }
+        SecondarySrc.Dispatch();
+    }
+}
+
+main {
+    @priority(5)
+    LoadBalancerHub Hub(PrimarySrc, SecondarySrc):();
+
+    @priority(3)
+    PrimaryRelay PrimaryRelay(Hub):();
+    @priority(4)
+    SecondaryRelay SecondaryRelay(Hub):();
+
+    @priority(1)
+    PrimarySource PrimarySrc(PrimaryRelay):();
+    @priority(2)
+    SecondarySource SecondarySrc(SecondaryRelay):();
+
+    @priority(6)
+    SystemBootstrapper Bootstrapper(PrimarySrc, SecondarySrc):();
+}

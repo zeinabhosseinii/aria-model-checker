@@ -1,0 +1,8 @@
+graph RIG {
+  rankdir=LR;
+  "a" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "ts" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "c1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "c2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "c1" -- "c2";
+}

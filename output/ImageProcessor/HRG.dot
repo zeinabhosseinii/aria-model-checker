@@ -1,0 +1,6 @@
+digraph HRG {
+  rankdir=TB;
+  "G0" [shape=box, style=filled, fillcolor="#90EE90", label="Group 1\ncollector"];
+  "G1" [shape=box, style=filled, fillcolor="#90EE90", label="Group 2\np1, p2, p3, p4, p5"];
+  "G1" -> "G0";
+}

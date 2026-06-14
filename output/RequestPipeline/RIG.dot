@@ -1,0 +1,10 @@
+graph RIG {
+  rankdir=LR;
+  "Endpoint" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Stage1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Stage2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Handler1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Handler2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Orchestrator" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Stage1" -- "Stage2";
+}

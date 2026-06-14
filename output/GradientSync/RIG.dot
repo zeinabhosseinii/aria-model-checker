@@ -1,0 +1,18 @@
+graph RIG {
+  rankdir=LR;
+  "Server" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit3" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Unit4" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Agent1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Agent2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Agent3" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Agent4" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Agent1" -- "Agent2";
+  "Agent1" -- "Agent3";
+  "Agent1" -- "Agent4";
+  "Agent2" -- "Agent3";
+  "Agent2" -- "Agent4";
+  "Agent3" -- "Agent4";
+}

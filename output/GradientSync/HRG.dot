@@ -1,0 +1,13 @@
+digraph HRG {
+  rankdir=TB;
+  "G0" [shape=box, style=filled, fillcolor="#90EE90", label="Group 1\nServer"];
+  "G1" [shape=box, style=filled, fillcolor="#90EE90", label="Group 2\nUnit1"];
+  "G2" [shape=box, style=filled, fillcolor="#90EE90", label="Group 3\nUnit2"];
+  "G3" [shape=box, style=filled, fillcolor="#90EE90", label="Group 4\nUnit3"];
+  "G4" [shape=box, style=filled, fillcolor="#90EE90", label="Group 5\nUnit4"];
+  "G5" [shape=box, style=filled, fillcolor="#90EE90", label="Group 6\nAgent1, Agent2, Agent3, Agent4"];
+  "G1" -> "G5";
+  "G2" -> "G5";
+  "G3" -> "G5";
+  "G4" -> "G5";
+}

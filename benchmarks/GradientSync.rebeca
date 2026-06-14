@@ -1,0 +1,54 @@
+// Federated learning protocol with gradient aggregation.
+// Correctness property: all gradients are successfully aggregated at the central server.
+
+reactiveclass AggregationServer(3) {
+    statevars { int AggregatedWeights; }
+
+    AggregationServer() {
+        AggregatedWeights = 0;
+    }
+
+    msgsrv SubmitGradient() {
+        AggregatedWeights = AggregatedWeights + 1;
+    }
+}
+
+reactiveclass ComputeUnit(5) {
+    knownrebecs { TrainingAgent Agent; }
+
+    ComputeUnit() {}
+
+    msgsrv RunComputation(int Epoch) {
+        Agent.SyncGradient(Epoch + 1);
+    }
+}
+
+reactiveclass TrainingAgent(5) {
+    knownrebecs { ComputeUnit Unit; AggregationServer Server; }
+
+    TrainingAgent() {
+        self.SyncGradient(0);
+    }
+
+    msgsrv SyncGradient(int Epoch) {
+        if (Epoch < 5) {
+            Unit.RunComputation(Epoch);
+        } else {
+            Server.SubmitGradient();
+        }
+    }
+}
+
+main {
+    AggregationServer Server():();
+
+    ComputeUnit Unit1(Agent1):();
+    ComputeUnit Unit2(Agent2):();
+    ComputeUnit Unit3(Agent3):();
+    ComputeUnit Unit4(Agent4):();
+
+    TrainingAgent Agent1(Unit1, Server):();
+    TrainingAgent Agent2(Unit2, Server):();
+    TrainingAgent Agent3(Unit3, Server):();
+    TrainingAgent Agent4(Unit4, Server):();
+}

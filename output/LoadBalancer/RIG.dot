@@ -1,0 +1,9 @@
+graph RIG {
+  rankdir=LR;
+  "Hub" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "PrimaryRelay" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "SecondaryRelay" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "PrimarySrc" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "SecondarySrc" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Bootstrapper" [shape=ellipse, style=filled, fillcolor=lightblue];
+}

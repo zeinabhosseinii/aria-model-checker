@@ -1,0 +1,19 @@
+graph RIG {
+  rankdir=LR;
+  "collector" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p1" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p2" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p3" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p4" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p5" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "p1" -- "p2";
+  "p1" -- "p3";
+  "p1" -- "p4";
+  "p1" -- "p5";
+  "p2" -- "p3";
+  "p2" -- "p4";
+  "p2" -- "p5";
+  "p3" -- "p4";
+  "p3" -- "p5";
+  "p4" -- "p5";
+}

@@ -1,0 +1,43 @@
+// Distributed data aggregation with concurrent collectors.
+// Correctness property: all collected data is successfully stored at the central aggregator.
+
+reactiveclass DataCollector(5) {
+    knownrebecs { CentralRepository Repository; }
+    statevars { int Phase; }
+
+    DataCollector() {
+        Phase = 0;
+        self.Collect();
+    }
+
+    msgsrv Collect() {
+        Phase = Phase + 1;
+        if (Phase < 5) {
+            self.Collect();
+        }
+        else if (Phase == 5) {
+            Repository.Store();
+        }
+    }
+}
+
+reactiveclass CentralRepository(3) {
+    statevars { int TotalStored; }
+
+    CentralRepository() {
+        TotalStored = 0;
+    }
+
+    msgsrv Store() {
+        TotalStored = TotalStored + 1;
+    }
+}
+
+main {
+    CentralRepository Repository():();
+
+    DataCollector Collector1(Repository):();
+    DataCollector Collector2(Repository):();
+    DataCollector Collector3(Repository):();
+    DataCollector Collector4(Repository):();
+}
