@@ -1,0 +1,14 @@
+graph RIG {
+  rankdir=LR;
+  "ds" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "ic" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "al" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "st" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "sm" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "mf" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "tf" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "ee" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "ic" -- "al";
+  "al" -- "st";
+  "mf" -- "tf";
+}

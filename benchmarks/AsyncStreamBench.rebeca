@@ -1,0 +1,258 @@
+reactiveclass EventEmitter(20) {
+    knownrebecs {
+        ModeFilter mf;
+        ThresholdFilter tf;
+    }
+    statevars {
+        int sent;
+        int mode;
+    }
+    EventEmitter() {
+        sent = 0;
+        mode = 0;
+        self.produce();
+    }
+    msgsrv produce() {
+        sent = sent + 1;
+        mode = ?(0, 1, 2);
+        if (sent <= 15) {
+            mf.process(sent, mode);
+            tf.process(sent, mode);
+            self.produce();
+        }
+    }
+}
+
+reactiveclass ModeFilter(30) {
+    knownrebecs {
+        StreamMerger sm;
+    }
+    statevars {
+        int accepted;
+        int rejected;
+        int last;
+    }
+    ModeFilter() {
+        accepted = 0;
+        rejected = 0;
+        last = 0;
+    }
+    msgsrv process(int v, int mode) {
+        if (mode == 0) {
+            accepted = accepted + 1;
+            last = v;
+            sm.collectA(v, accepted);
+        } else {
+            rejected = rejected + 1;
+        }
+        assertion(rejected <= accepted + 3);
+    }
+}
+
+reactiveclass ThresholdFilter(30) {
+    knownrebecs {
+        StreamMerger sm;
+    }
+    statevars {
+        int accepted;
+        int rejected;
+        int last;
+        int streak;
+    }
+    ThresholdFilter() {
+        accepted = 0;
+        rejected = 0;
+        last = 0;
+        streak = 0;
+    }
+    msgsrv process(int v, int mode) {
+        if (mode == 1) {
+            accepted = accepted + 1;
+            streak = streak + 1;
+            last = v;
+            sm.collectB(v, streak);
+        } else {
+            rejected = rejected + 1;
+            streak = 0;
+        }
+        assertion(streak <= 8);
+    }
+}
+
+reactiveclass StreamMerger(60) {
+    knownrebecs {
+        StatTracker st;
+        AuditLog al;
+    }
+    statevars {
+        int fromA;
+        int fromB;
+        int totalA;
+        int totalB;
+        int combined;
+    }
+    StreamMerger() {
+        fromA = 0;
+        fromB = 0;
+        totalA = 0;
+        totalB = 0;
+        combined = 0;
+    }
+    msgsrv collectA(int v, int weight) {
+        fromA = fromA + 1;
+        totalA = totalA + v;
+        combined = combined + (v * weight);
+        al.logIt(totalA);
+        st.analyze(combined, fromA, fromB);
+        assertion(totalA <= totalB + 50);
+    }
+    msgsrv collectB(int v, int streak) {
+        fromB = fromB + 1;
+        totalB = totalB + v;
+        combined = combined + v;
+        al.logIt(totalB);
+        st.analyze(combined, fromA, fromB);
+        assertion(totalB <= totalA + 50);
+    }
+}
+
+reactiveclass StatTracker(60) {
+    knownrebecs {
+        InvariantChecker ic;
+        DataStore ds;
+    }
+    statevars {
+        int runs;
+        int peak;
+        int trough;
+        int sumAll;
+        int balanced;
+    }
+    StatTracker() {
+        runs = 0;
+        peak = 0;
+        trough = 999;
+        sumAll = 0;
+        balanced = 0;
+    }
+    msgsrv analyze(int combined, int cntA, int cntB) {
+        runs = runs + 1;
+        sumAll = sumAll + combined;
+        if (combined > peak) {
+            peak = combined;
+        }
+        if (combined < trough) {
+            trough = combined;
+        }
+        if (cntA == cntB) {
+            balanced = balanced + 1;
+        }
+        ds.store(sumAll);
+        ic.verify(peak, trough, balanced, runs);
+        assertion(trough <= peak);
+        assertion(runs <= 60);
+    }
+}
+
+reactiveclass InvariantChecker(60) {
+    knownrebecs {
+        DataStore ds;
+    }
+    statevars {
+        int checks;
+        int failures;
+        int lastPeak;
+        int lastTrough;
+    }
+    InvariantChecker() {
+        checks = 0;
+        failures = 0;
+        lastPeak = 0;
+        lastTrough = 999;
+    }
+    msgsrv verify(int peak, int trough, int balanced, int runs) {
+        checks = checks + 1;
+        if (peak < lastPeak) {
+            failures = failures + 1;
+        }
+        if (trough > lastTrough) {
+            failures = failures + 1;
+        }
+        lastPeak = peak;
+        lastTrough = trough;
+        ds.store(failures);
+        assertion(failures <= 2);
+        assertion(checks <= 55);
+    }
+}
+
+reactiveclass AuditLog(40) {
+    knownrebecs {
+        DataStore ds;
+    }
+    statevars {
+        int entries;
+        int total;
+        int last;
+        int maxSeen;
+    }
+    AuditLog() {
+        entries = 0;
+        total = 0;
+        last = 0;
+        maxSeen = 0;
+    }
+    msgsrv logIt(int v) {
+        entries = entries + 1;
+        total = total + v;
+        last = v;
+        if (v > maxSeen) {
+            maxSeen = v;
+        }
+        ds.store(total);
+        assertion(maxSeen <= 100);
+        assertion(entries <= 35);
+    }
+}
+
+reactiveclass DataStore(100) {
+    knownrebecs { }
+    statevars {
+        int a;
+        int b;
+        int c;
+        int d;
+        int e;
+        int writes;
+        int total;
+    }
+    DataStore() {
+        a = 0;
+        b = 0;
+        c = 0;
+        d = 0;
+        e = 0;
+        writes = 0;
+        total = 0;
+    }
+    msgsrv store(int v) {
+        writes = writes + 1;
+        total = total + v;
+        a = b;
+        b = c;
+        c = d;
+        d = e;
+        e = v;
+    }
+}
+
+main {
+    DataStore ds():();
+    InvariantChecker ic(ds):();
+    AuditLog al(ds):();
+    StatTracker st(ic, ds):();
+    StreamMerger sm(st, al):();
+    ModeFilter mf(sm):();
+    ThresholdFilter tf(sm):();
+    EventEmitter ee(mf, tf):();
+}

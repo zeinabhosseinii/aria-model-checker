@@ -1,0 +1,12 @@
+digraph HRG {
+  rankdir=TB;
+  "G0" [shape=box, style=filled, fillcolor="#90EE90", label="Group 1\nds"];
+  "G1" [shape=box, style=filled, fillcolor="#90EE90", label="Group 2\nic, al, st"];
+  "G2" [shape=box, style=filled, fillcolor="#90EE90", label="Group 3\nsm"];
+  "G3" [shape=box, style=filled, fillcolor="#90EE90", label="Group 4\nmf, tf"];
+  "G4" [shape=box, style=filled, fillcolor="#90EE90", label="Group 5\nee"];
+  "G1" -> "G0";
+  "G2" -> "G1";
+  "G3" -> "G2";
+  "G4" -> "G3";
+}
