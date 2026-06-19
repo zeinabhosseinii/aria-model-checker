@@ -64,6 +64,7 @@ Output goes to `output/<ModelName>/`:
 | GradientSync | 1,313 | 584 | 55% | Queue Overflow |
 | ImageProcessor | 1,144 | 660 | 42% | Queue Overflow |
 | RequestPipeline | 2,214 | 1,091 | 50% | Assertion Violation |
+| AsyncStreamBench | 7,588 | 4,820 | 36% | Assertion Violation |
 
 ---
 
