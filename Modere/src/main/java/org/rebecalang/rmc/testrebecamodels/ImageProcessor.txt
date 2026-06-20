@@ -1,0 +1,42 @@
+reactiveclass ImageProcessor(5) {
+    knownrebecs { ResultCollector collector; }
+    statevars { int phase; }
+
+    ImageProcessor() {
+        phase = 0;
+        self.processImage();
+    }
+
+    msgsrv processImage() {
+        phase = phase + 1;
+
+        if (phase < 7) {
+            self.processImage();
+        }
+        else if (phase == 7) {
+            collector.storeResult();
+        }
+    }
+}
+
+reactiveclass ResultCollector(4) {
+    statevars { int totalStored; }
+
+    ResultCollector() {
+        totalStored = 0;
+    }
+
+    msgsrv storeResult() {
+        totalStored = totalStored + 1;
+    }
+}
+
+main {
+    ResultCollector collector():();
+
+    ImageProcessor p1(collector):();
+    ImageProcessor p2(collector):();
+    ImageProcessor p3(collector):();
+    ImageProcessor p4(collector):();
+    ImageProcessor p5(collector):();  
+}

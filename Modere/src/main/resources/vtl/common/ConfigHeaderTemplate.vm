@@ -1,0 +1,49 @@
+#*In the name of Allah*#
+
+#ifndef __CONFIG_H__
+\#define __CONFIG_H__
+\#include "Types.h"
+
+#if($fileGeneratorProperties.isSafeMode())
+\#define SAFE_MODE
+#end
+#if($fileGeneratorProperties.isProgressReport())
+\#define PROGRESS_REPORT
+#end
+#if($fileGeneratorProperties.isExportStateSpace())
+\#define EXPORT_STATE_SPACE
+#end
+#if($fileGeneratorProperties.isDebugTrace())
+\#define DEBUG
+#end
+#if($fileGeneratorProperties.isDebugAll())
+\#define DEBUG_LEVEL_2
+\#define DEBUG
+#end
+#if($fileGeneratorProperties.isReduction())
+\#define PO
+#end
+#if($fileGeneratorProperties.isSymmetry())
+\#define SYMM
+\#define ON_THE_FLY
+#end
+
+
+\#if (defined DEBUG || defined EXPORT_STATE_SPACE)
+	\#define ENABLE_STATE_ID
+#endif
+
+#foreach ($fieldDeclaration in $envVariables)
+	 extern $translator.translate($fieldDeclaration, "") 
+#end
+
+#foreach ($fieldDeclaration in $featureVariables)
+	 extern $translator.translate($fieldDeclaration, "") 
+#end
+
+\#define NEW_STATE 1
+
+#parse ("$configPatch")
+#addDefinitions()
+
+#[[#endif]]#

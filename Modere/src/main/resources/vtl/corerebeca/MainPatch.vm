@@ -1,0 +1,82 @@
+#*In the name of Allah*#
+
+#macro (mainMacroPutAdditionalIncludes)
+	#if ($fileGeneratorProperties.isTraceGenerator()) 
+		\#include "AbstractCoreRebecaTraceGenerator.h"
+	#else
+		\#include "CoreRebecaModelChecker.h"
+	#end
+	int maxDepth;
+#end
+
+#macro (mainMacroPutInstanceReference)
+	#if ($fileGeneratorProperties.isTraceGenerator()) 
+		AbstractCoreRebecaTraceGenerator *analyzer;
+	#else
+		#ifdef EXPORT_STATE_SPACE
+		ofstream statespace;
+		#endif
+		CoreRebecaModelChecker *analyzer;
+	#end
+#end
+
+#macro (mainMacroPutAdditionalCommandOptions)
+	#ifdef MONTE_CARLO
+	parser.addOption('e', "error", "Error value of the calculated results", "value");
+	parser.addOption('d', "delta", "Confidence value of the calculated results", "fileName");
+	#endif
+	
+	#if ($fileGeneratorProperties.isTraceGenerator())
+		parser.addOption('g', "generatetraces", "Simulate the model for number of times which is specified by \"value\".", "value");
+		parser.addOption('l', "timelimit", "Set termination time for each simulation trace.", "value");
+	#else
+	    #ifdef EXPORT_STATE_SPACE	
+		parser.addOption('x', "exportStatespace", "Exporting the state space in file \"fileName\".", "fileName");
+		#endif
+	#end
+	parser.addOption('p', "propertyName", "The name of the property which model must be checked against it", "property name");
+	parser.addOption('d', "searchDepth", "The depth of search in DFS based model checking algorithm or the size of the open border in BFS based model checking", "maximum search depth");
+#end
+
+
+#macro (mainMacroPutAnalyzerAllocation)
+	#if ($fileGeneratorProperties.isTraceGenerator())
+		int numberOfTraces = parser.hasOption('g') ? atoi(parser.getOptionValue('g').c_str()) : 1;
+		TIME_TYPE timeLimit = parser.hasOption('l') ? atoi(parser.getOptionValue('l').c_str()) : 0;
+		analyzer = new AbstractCoreRebecaTraceGenerator(*result, hashmapSize, numberOfTraces, depthLimit);
+		analyzer->generateTraces();
+	#else
+		#ifdef EXPORT_STATE_SPACE
+		if (parser.hasOption('x')) {
+			statespace.open(parser.getOptionValue('x').c_str(), ofstream::out|ofstream::trunc);
+		} else {
+			statespace.open("statespace.xml", ofstream::out|ofstream::trunc);
+			#ifdef DEBUG_LEVEL_2 
+			cout.rdbuf(statespace.rdbuf());
+			#endif
+			
+		}
+		#endif
+		maxDepth = parser.hasOption('d') ? atoi(parser.getOptionValue('d').c_str()) : 10000;
+		string propertyName;
+		if (parser.hasOption('p')) {
+			propertyName = parser.getOptionValue('p');
+		}
+		analyzer = new CoreRebecaModelChecker(*result
+	    	#ifdef EXPORT_STATE_SPACE
+	    		, statespace
+			#endif
+			, hashmapSize
+			);
+		#ifdef PROGRESS_REPORT
+			continueReportProgress = true;
+			std::thread t1(progressReport);
+		#endif
+		analyzer->doModelChecking(propertyName, "LTL");
+		#ifdef PROGRESS_REPORT
+			continueReportProgress = false;
+			t1.join();
+		#endif
+		
+	#end
+#end

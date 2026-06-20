@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 15 /Users/phateme/tmp/ts2_symm_execute)",
+      "Bash(/Users/phateme/tmp/ts2_symm_execute)",
+      "Bash(kill %1)",
+      "Read(//private/tmp/test_Hospital_symm_d/**)",
+      "Bash(sed -i '' 's/result = NEW_STATE;/result = NEW_STATE; fprintf\\(stderr, \"DBG storeState called\\\\\\\\n\"\\);/' AbstractTimedRebecaAnalyzer.cpp)",
+      "Bash(sed -i '' 's/node.state = bfsStorage->put\\(temp/fprintf\\(stderr, \"DBG new-untimed-state\\\\\\\\n\"\\); node.state = bfsStorage->put\\(temp/' AbstractTimedRebecaAnalyzer.cpp)",
+      "Bash(sed -i '' 's/node.state->shiftTimes.push_back\\(rebecsLocalShift\\)/fprintf\\(stderr, \"DBG new-timed-bundle\\\\\\\\n\"\\); node.state->shiftTimes.push_back\\(rebecsLocalShift\\)/' AbstractTimedRebecaAnalyzer.cpp)",
+      "Bash(g++ -std=c++11 -O0 *.cpp -o execute)",
+      "Read(//private/tmp/hospital_base/**)",
+      "Bash(g++ -std=c++11 -O2 *.cpp -o execute)",
+      "Bash(./execute)",
+      "Bash(jar tf *)",
+      "Bash(grep -v '\\\\$')"
+    ]
+  }
+}

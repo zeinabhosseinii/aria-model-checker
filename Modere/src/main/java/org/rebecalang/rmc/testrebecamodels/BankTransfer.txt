@@ -1,0 +1,86 @@
+// Bank Transfer Protocol with a coordinator and two participants.
+// Correctness property: all participants agree on the same outcome
+// (either all commit or all abort).
+
+reactiveclass TransactionManager(50) {
+    knownrebecs {
+        BankNode Sender;
+        BankNode Receiver;
+    }
+    statevars {
+        int ApprovalCount;
+        int ResponseCount;
+        boolean Decided;
+        boolean Committed;
+    }
+    TransactionManager() {
+        ApprovalCount = 0;
+        ResponseCount = 0;
+        Decided = false;
+        Committed = false;
+        self.InitiateTransfer();
+    }
+    msgsrv InitiateTransfer() {
+        Sender.RequestApproval();
+        Receiver.RequestApproval();
+    }
+    msgsrv SubmitVote(boolean Vote) {
+        ResponseCount = ResponseCount + 1;
+        if (Vote == true) {
+            ApprovalCount = ApprovalCount + 1;
+        }
+        if (ResponseCount < 10) {
+            Decided = true;
+            if (ApprovalCount < 10) {
+                Committed = true;
+                Sender.FinalizeTransfer();
+                Receiver.FinalizeTransfer();
+            }
+            else {
+                Committed = false;
+                Sender.CancelTransfer();
+                Receiver.CancelTransfer();
+            }
+        }
+    }
+    msgsrv Acknowledge() {
+        Sender.RequestApproval();
+        Receiver.RequestApproval();
+    }
+}
+
+reactiveclass BankNode(50) {
+    knownrebecs {
+        TransactionManager TxManager;
+    }
+    statevars {
+        boolean Approved;
+        boolean Settled;
+        boolean Completed;
+    }
+    BankNode() {
+        Approved = false;
+        Settled = false;
+        Completed = false;
+    }
+    msgsrv RequestApproval() {
+        Approved = ?(false, true);
+        TxManager.SubmitVote(true);
+    }
+    msgsrv FinalizeTransfer() {
+        Settled = ?(false, true);
+        Completed = ?(false, true);
+        TxManager.Acknowledge();
+    }
+    msgsrv CancelTransfer() {
+        Settled = ?(false, true);
+        Completed = ?(false, true);
+        TxManager.Acknowledge();
+    }
+}
+
+main {
+    TransactionManager TxManager(Sender, Receiver):();
+    BankNode Sender(TxManager):();
+    BankNode Receiver(TxManager):();
+}

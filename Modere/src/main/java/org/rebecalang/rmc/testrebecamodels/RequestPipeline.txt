@@ -1,0 +1,72 @@
+// Parallel request pipeline with a shared endpoint processor.
+// Correctness property: shared state remains consistent across concurrent paths.
+
+reactiveclass PipelineOrchestrator(5) {
+    knownrebecs {
+        InputHandler Handler1;
+        InputHandler Handler2;
+    }
+    PipelineOrchestrator() {
+        self.StartPipeline();
+    }
+    msgsrv StartPipeline() {
+        Handler1.Process();
+        Handler2.Forward();
+    }
+}
+
+reactiveclass InputHandler(5) {
+    knownrebecs {
+        StageProcessor Processor;
+    }
+    msgsrv Process() {
+        Processor.HandlePrimary();
+    }
+    msgsrv Forward() {
+        Processor.HandleSecondary();
+    }
+}
+
+reactiveclass StageProcessor(5) {
+    knownrebecs {
+        EndpointProcessor Endpoint;
+    }
+    msgsrv HandlePrimary() {
+        Endpoint.HandlePrimary();
+    }
+    msgsrv HandleSecondary() {
+        Endpoint.HandleSecondary();
+    }
+}
+
+reactiveclass EndpointProcessor(5) {
+    knownrebecs {
+        InputHandler Handler1;
+        InputHandler Handler2;
+    }
+    statevars {
+        int State;
+    }
+    EndpointProcessor() {
+        State = 1;
+    }
+    msgsrv HandleSecondary() {
+        State = State + 100;
+        assertion(State >= 2);
+        Handler1.Process();
+    }
+    msgsrv HandlePrimary() {
+        State = State * 2;
+        assertion(State >= 2);
+        Handler2.Forward();
+    }
+}
+
+main {
+    EndpointProcessor Endpoint(Handler1, Handler2):();
+    StageProcessor Stage1(Endpoint):();
+    StageProcessor Stage2(Endpoint):();
+    InputHandler Handler1(Stage1):();
+    InputHandler Handler2(Stage2):();
+    PipelineOrchestrator Orchestrator(Handler1, Handler2):();
+}

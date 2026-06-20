@@ -15,7 +15,6 @@ erdg/grammar/RebecaParser$BindingListContext.class
 erdg/grammar/RebecaParser.class
 erdg/grammar/BabelParser$SendStatementContext.class
 erdg/grammar/RebecaParser$ForStatementContext.class
-erdg/grammar/RebecaLexer.interp
 erdg/grammar/BabelParser$OrExprContext.class
 erdg/grammar/RebecaParser$InstanceofExprContext.class
 erdg/grammar/BabelParser$GroupExprContext.class
@@ -55,7 +54,6 @@ erdg/grammar/RebecaParser$EmptyStatementContext.class
 erdg/pipeline/HRG$Edge.class
 erdg/pipeline/Step5PriorityAssignmentGenerator.class
 erdg/grammar/RebecaParser$CallOrVarExprContext.class
-erdg/grammar/BabelLexer.interp
 erdg/grammar/RebecaParser$ConstructorDeclarationContext.class
 erdg/grammar/RebecaParser$PostfixExprContext.class
 erdg/grammar/BabelParser$EqExprContext.class
@@ -66,7 +64,6 @@ erdg/grammar/RebecaParser$CastExprContext.class
 erdg/viz/Visualizer.class
 erdg/grammar/RebecaParser$MainDeclarationContext.class
 erdg/model/PriorityAssignment.class
-erdg/grammar/Rebeca.interp
 erdg/model/MessageServerNode.class
 erdg/grammar/RebecaBaseVisitor.class
 erdg/grammar/BabelParser$TrueExprContext.class
@@ -105,7 +102,6 @@ erdg/grammar/BabelParser$CompareExprContext.class
 erdg/grammar/BabelParser$MethodContext.class
 erdg/grammar/RebecaVisitor.class
 erdg/grammar/BabelParser$IfStatementContext.class
-erdg/grammar/Babel.interp
 erdg/grammar/RebecaParser$ExprStatementContext.class
 erdg/ast/AnalysisResult$MessageServer.class
 erdg/grammar/RebecaParser$ArgumentsContext.class

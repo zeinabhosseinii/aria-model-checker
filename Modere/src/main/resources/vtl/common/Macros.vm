@@ -1,0 +1,204 @@
+#*In the name of Allah*#
+
+#set($newline = "
+")
+#macro (setAnnotationsBasedSpecification)
+    #foreach($annotation in $instance.getAnnotations())
+    	#if ($annotation.getIdentifier() == "priority")
+    		_ref_${instance.getName()}->setPriority($annotation.getValue().getLiteralValue());
+    	#end
+	#end
+#end
+
+#macro (applyPatch $patches $methodName $param)
+	#foreach($patch in $patches)
+		#parse("$patch")
+		#set($call = "#${patchRelatedTo}$methodName($param)")
+		#evaluate($call)
+	#end
+#end
+
+#macro (putParametersValues $parameterList $putComma)
+    #if(!$parameterList.isEmpty())
+	    #if($putComma)
+	        ,
+	    #end
+        #foreach($param in $parameterList)
+            _ref_$param.getName()
+	        #if (!$foreach.last)
+	        , 
+	        #end
+        #end
+    #end
+#end
+
+#macro (putParameters $parameterList $putComma)
+	#if (!$parameterList.isEmpty())
+	    #if($putComma)
+	        ,
+	    #end
+	    #foreach($param in $parameterList)
+    		$TypesAnalysisUtilities.getCPPTypeName($param.getType())
+	         _ref_$param.getName()
+	        #if (!$foreach.last)
+	        , 
+	        #end
+	    #end
+    #end
+#end
+
+#macro (retrieveBooleanValuation $varName)
+	#set($booleanResult = $booleanResult + "$varName = (bool) ($arrayName [$indexName] & AbstractActor::coeff[$booleanCounter]);$newline")
+	#set($booleanCounter = $booleanCounter + 1)
+	#if ($booleanCounter == 8)
+		#set($booleanCounter = 0)
+		#set($booleanResult = $booleanResult + "$indexName++;$newline")
+	#end
+#end
+
+#macro (retrieveListFromArray $arrayName $indexName $varList $printVariableType $prefix)
+    #if($varList)
+    	#set($booleanCounter = 0)
+    	#set($booleanResult = "")
+        #foreach($variableDec in $varList)
+            #set($name = $variableDec.getName())
+            #set($pointerName = $prefix + $name)
+            #set($type = $variableDec.getType())
+
+            #if ($printVariableType)
+            	$translator.translator($variableDec);
+            #end            
+            
+            #if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+            	#set($isBoolean = ($type.getOrdinaryPrimitiveType() == $typeSystem.BOOLEAN_TYPE))
+            #else
+            	#set($isBoolean = ($type == $typeSystem.BOOLEAN_TYPE))
+            #end
+            
+            #if ($isBoolean)
+            	#set($size = $TypesAnalysisUtilities.getInstance().getTypeSize($type))
+            	#if(!$ArrayType.getClass().isAssignableFrom($type.getClass()))
+            		#retrieveBooleanValuation ("$prefix${name}")
+            	#else
+            		#set($size = $size - 1)
+            		#foreach ($varCounter in [0 .. $size])
+						#set($varName = "$prefix${name}")
+						#set($rowCounter = 1)
+						#foreach($dimension in $type.getDimensions())
+							#set($tempIndex = $varCounter % $dimension)
+							#set($varName = $varName + "[" + $tempIndex + "]")
+							#set($varCounter = $varCounter / $dimension)
+						#end
+            			#retrieveBooleanValuation ($varName)
+            		#end
+            	#end
+            #else
+	            #if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+	            	#set($dimensions = $type.getDimensions())
+	            	#set($index = "")
+					#foreach($dimension in $type.getDimensions())
+						#if( $foreach.hasNext )
+							for (int cnt$foreach.count = 0; cnt$foreach.count < $dimension; cnt$foreach.count++) {
+							#set($index = $index + "[cnt$foreach.count]")
+						#else
+							#set($size = $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type.getOrdinaryPrimitiveType()) + " * $dimension")
+						#end
+					#end
+					#set($varName = "$pointerName$index" + ".data()")
+					memcpy($varName, &$arrayName [$indexName], $size);					
+					$indexName += $size;
+					#foreach($dimension in $type.getDimensions())
+						#if( $foreach.hasNext )
+							}
+						#end
+					#end
+	            #else
+                	memcpy(&$pointerName, &$arrayName [$indexName], $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type));
+	                $indexName += $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type);
+	            #end
+            #end
+        #end
+        #if ($booleanCounter > 0)
+            #set($booleanResult = $booleanResult + "++$indexName;")
+        #end
+        #evaluate($booleanResult)
+    #end
+#end
+
+#macro (putBooleanValuation $varName)
+	#if ($booleanCounter == 0)
+		#set($booleanResult = $booleanResult + "$arrayName [$indexName] = 0;$newline")
+	#end
+	#set($booleanResult = $booleanResult + "$arrayName [$indexName] |= ($varName ? 0xFF : 0x00) & AbstractActor::coeff[$booleanCounter]; $newline")
+	#set($booleanCounter = $booleanCounter + 1)
+	#if ($booleanCounter == 8)
+		#set($booleanCounter = 0)
+		#set($booleanResult = $booleanResult + "$indexName++;$newline")
+	#end
+#end
+
+#macro (putListToArray $arrayName $indexName $varList $prefix)
+    #if($varList)
+    	#set($booleanCounter = 0)
+    	#set($booleanResult = "")
+    	
+        #foreach($variableDec in $varList)
+            #set($name = $variableDec.getName())
+            #set($pointerName = $prefix + $name)
+            #set($type = $variableDec.getType())            
+            
+            #if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+            	#set($isBoolean = ($type.getOrdinaryPrimitiveType() == $typeSystem.BOOLEAN_TYPE))
+            #else
+            	#set($isBoolean = ($type == $typeSystem.BOOLEAN_TYPE))
+            #end
+            #if ($isBoolean)
+            	#set($size = $TypesAnalysisUtilities.getInstance().getTypeSize($type))
+            	#if (!$ArrayType.getClass().isAssignableFrom($type.getClass()))
+            		#putBooleanValuation ("$prefix${name}")
+            	#else
+            		#set($size = $size - 1)
+            		#foreach ($varCounter in [0 .. $size])
+						#set($varName = "($prefix${name})")
+						#set($rowCounter = 1)
+						#foreach($dimension in $type.getDimensions())
+							#set($tempIndex = $varCounter % $dimension)
+							#set($varName = $varName + "[" + $tempIndex + "]")
+							#set($varCounter = $varCounter / $dimension)
+						#end
+            			#putBooleanValuation ($varName)
+            		#end
+            	#end
+            #else
+	            #if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+	            	#set($dimensions = $type.getDimensions())
+	            	#set($index = "")
+					#foreach($dimension in $type.getDimensions())
+						#if( $foreach.hasNext )
+							for (int cnt$foreach.count = 0; cnt$foreach.count < $dimension; cnt$foreach.count++) {
+							#set($index = $index + "[cnt$foreach.count]")
+						#else
+							#set($size = $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type.getOrdinaryPrimitiveType()) + " * $dimension")
+						#end
+					#end
+					#set($varName = "$pointerName$index" + ".data()")
+					memcpy(&$arrayName [$indexName], $varName, $size);					
+					$indexName += $size;
+					#foreach($dimension in $type.getDimensions())
+						#if( $foreach.hasNext )
+							}
+						#end
+					#end
+	            #else
+                	memcpy(&$arrayName [$indexName], &$pointerName, $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type));
+	                $indexName += $TypesAnalysisUtilities.getInstance().getTypeSizeLabel($type);
+	            #end
+            #end
+        #end
+        #if ($booleanCounter % 8 != 0)
+            #set($booleanResult = $booleanResult + "++$indexName;")
+        #end
+
+        #evaluate($booleanResult)
+    #end
+#end

@@ -1,0 +1,100 @@
+#*In the name of Allah*#
+
+#parse ("/vtl/common/Macros.vm")
+
+#set($reactiveClassName = $reactiveClassDeclaration.getName())
+
+#ifndef __${reactiveClassName.toUpperCase()}_ACTOR_H__
+\#define __${reactiveClassName.toUpperCase()}_ACTOR_H__
+
+#foreach($tempReactiveClassDeclaration in $allClassDeclarations)
+#if ($tempReactiveClassDeclaration.getName() != $reactiveClassName)
+class ${tempReactiveClassDeclaration.getName()}Actor;
+#end
+#end
+
+#foreach($baseClass in $baseClasses)
+\#include "${baseClass}.h"
+#end
+
+class ${reactiveClassName}Actor :
+#foreach($baseClass in $baseClasses)
+	#if (!($foreach.first))
+	,
+	#end
+	public virtual $baseClass
+#end
+{
+
+public:
+    ${reactiveClassName}Actor(byte myID, char* myName, int maxQueueLength, int maxParamLength, vector<AbstractActor*>& rebecsRef
+		#ifdef DEBUG_LEVEL_2 
+			, ostream &out
+		#[[#endif]]#
+    	#applyPatch($patches 'AdditionalInitializationParameters' true)
+    );
+	~${reactiveClassName}Actor();
+	
+	long methodSelectorAndExecutor();
+	
+    char* getClassName();
+    
+	virtual void exportStateVariablesInXML(ostream &out, string tab);
+	virtual void exportAMessageInXML(ostream &out, string tab, int cnt);
+
+	virtual void exportInsideStateVariablesTagInXML(ostream &out, string tab);
+
+    virtual void marshalActorToArray(byte* array);
+    void marshalVariablesToArray(byte * array);
+
+    virtual void unmarshalActorFromArray(byte* array);
+    void unmarshalVariablesFromArray(byte * array);
+
+
+    #foreach($fieldDec in $reactiveClassDeclaration.getStatevars())
+    	$translator.translate($fieldDec, "")
+    #end
+
+	#foreach ($constructor in $reactiveClassDeclaration.getConstructors())
+		long constructor${reactiveClassName}(byte creatorID
+		#putParameters($constructor.getFormalParameters() true)
+		);
+	#end
+
+    #foreach ($method in $reactiveClassDeclaration.getMsgsrvs())
+       virtual void _msg_${method.getName()}(byte senderId
+            #putParameters($method.getFormalParameters() true)
+        )
+         #if ($method.isAbstract())
+        	=0
+        #end
+        ;
+       virtual long msgsrv${method.getName()}(
+            #putParameters($method.getFormalParameters() false)
+        )
+        #if ($method.isAbstract())
+        	=0
+        #end
+        ;
+    #end
+
+	#applyPatch($patches 'AdditionalSignatures' '')
+
+    #ifdef SYMM
+    virtual void marshalVariablesToArrayWithPerm(byte* array, byte* perm);
+    virtual void marshalParamsWithPerm(byte* output, byte* params, byte msgType, byte* perm);
+    #[[#endif]]#
+
+protected:
+    #foreach ($method in $reactiveClassDeclaration.getSynchMethods())
+    	$TypesAnalysisUtilities.getInstance().getCPPTypeName($method.getReturnType()) _synchmethod_${method.getName()}(
+            #putParameters($method.getFormalParameters() false)
+        )
+         #if ($method.isAbstract())
+        	=0
+        #end
+        ;
+    #end    
+};
+
+#[[#endif]]#

@@ -1,0 +1,101 @@
+#*In the name of Allah*#
+
+#set($patchRelatedTo = "timedRebeca")
+
+#macro (timedRebecaAdditionalDeclarations $param)
+
+#end
+
+#macro (timedRebecaAdditionalInitializations $param)
+		#foreach($fieldDec in $reactiveClassDeclaration.getStatevars())
+	        #foreach($variableDec in $fieldDec.getVariableDeclarators())
+	            #set($type = $fieldDec.getType())
+	            #set($isTime = ($type == $typeSystem.TIMER_TYPE))
+	            #if ($isTimer)
+	            	#if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+	            		#set($dimensions = $type.getDimensions())
+	            		#set($index = "")
+						#foreach($dimension in $type.getDimensions())
+							#set($index = $index + "[cnt$velocityCount]")
+							for (int cnt$velocityCount = 0; cnt$velocityCount < $dimension; cnt$velocityCount++) {
+						#end
+							stopTimer(this->_ref_${variableDec.getVariableName()}$index);
+						#foreach($dimension in $type.getDimensions())
+							#if( $foreach.hasNext )
+								}
+							#end
+						#end
+					#else
+		            	stopTimer(this->_ref_${variableDec.getVariableName()});
+		            #end
+	            #end
+    		#end
+		#end
+	
+#end
+
+#macro (timedRebecaAdditionalInitializationParameters $hasType)
+#end
+
+#macro (timedRebecaAdditionalSignatures)
+public:
+    #foreach ($method in $reactiveClassDeclaration.getMsgsrvs())
+      	 #if ($method.isAbstract())
+        		virtual
+        #end
+      	  void _timed_msg_${method.getName()}(byte senderId
+        	    #putParameters($method.getFormalParameters() true)
+        	, TIME_TYPE executionTime, TIME_TYPE deadline)
+        	#if ($method.isAbstract())
+        		=0
+        	#end	
+        		;
+    #end
+    virtual void setNow(TIME_TYPE now);
+    
+#end
+
+#macro (timedRebecaAdditionalBodies)
+
+	#foreach ($methodDeclaration in $reactiveClassDeclaration.getMsgsrvs())
+		#if (!$methodDeclaration.isAbstract())
+	    void ${reactiveClassDeclaration.getName()}Actor::_timed_msg_$methodDeclaration.getName() (byte senderId
+	        #putParameters($methodDeclaration.getFormalParameters() true), TIME_TYPE executionTime, TIME_TYPE deadline){
+	    _msg_$methodDeclaration.getName() (senderId
+	        #putParametersValues($methodDeclaration.getFormalParameters() true));
+	    addTimedBundles(senderId, executionTime, deadline);
+		}
+		#end
+	#end
+	void ${reactiveClassDeclaration.getName()}Actor::setNow(TIME_TYPE now) {
+	
+		#foreach($fieldDec in $reactiveClassDeclaration.getStatevars())
+	        #foreach($variableDec in $fieldDec.getVariableDeclarators())
+	            #set($type = $fieldDec.getType())
+	            #set($isTimer = ($type == $typeSystem.TIMER_TYPE))
+	            #if ($isTimer)
+	            	#if($ArrayType.getClass().isAssignableFrom($type.getClass()))
+	            		#set($dimensions = $type.getDimensions())
+	            		#set($index = "")
+						#foreach($dimension in $type.getDimensions())
+							#set($index = $index + "[cnt$velocityCount]")
+							for (int cnt$velocityCount = 0; cnt$velocityCount < $dimension; cnt$velocityCount++) {
+						#end
+							if (this->_ref_${variableDec.getVariableName()}$index != -1)
+								this->_ref_${variableDec.getVariableName()}$index += (now - _ref_now);
+						#foreach($dimension in $type.getDimensions())
+							#if( $foreach.hasNext )
+								}
+							#end
+						#end
+					#else
+						if (this->_ref_${variableDec.getVariableName()} != -1)
+		            		this->_ref_${variableDec.getVariableName()} += (now - _ref_now);
+		            #end
+	            #end
+    		#end
+		#end
+		AbstractTimedActor::setNow(now);
+	}	
+	
+#end

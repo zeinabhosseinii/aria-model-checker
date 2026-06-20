@@ -1,0 +1,253 @@
+#*In the name of Allah*#
+
+#set($patchRelatedTo = "timedRebecaFTTS")
+
+#macro (timedRebecaFTTSAdditionalSignatures $noParam)
+
+	virtual void storeInitialState();
+	virtual long executeRebec(int rebecId);
+	#if ($fileGeneratorProperties.isReduction())
+	bool areActiveActionsSafe(byte* state, int r, int propertySelector);
+	#end
+#end
+
+#macro (timedRebecaFTTSAdditionalBodies $noParam)
+
+#if ($fileGeneratorProperties.isReduction())
+bool TimedModelChecker::areActiveActionsSafe(byte* state, int r, int propertySelector) {
+	static bool safeActions[REBEC_COUNT][$maxMsgIdPlusOne] = {
+#foreach($row in $safeActionsTable)
+		{ #foreach($val in $row)$val#if(!$foreach.last), #end#end }#if(!$foreach.last),#end
+
+#end
+	};
+	return safeActions[r][rebecs[r]->messageQueue[0]];
+}
+#end
+
+void TimedModelChecker::printCounterExampleTransition(TimedBFSState* parent, TimedBFSState* child) {
+
+	OpenBorderNode parentNode, childNode;
+	
+	childNode.state = child;
+	childNode.stateActiveBundleNumber = 0;
+	
+	parentNode.state = parent;
+	parentNode.stateActiveBundleNumber = 0;
+	
+	int rebecId = child->parents.front().executedRebecIndex;
+	string label = "";
+	label = rebecs[rebecId]->activeAction();
+	string sender = rebecs[rebecs[rebecId]->senderQueue[0]]->getName();
+	exportTransition(parentNode, childNode, sender, rebecs[rebecId]->getName(), label, rebecs[rebecId]->getNow(), 0, out);
+}
+void TimedModelChecker::printModelCheckingOptions() {
+    out << "\t<option>FTTS</option>" << std::endl;
+}
+
+void TimedModelChecker::exportModelCheckingReportExtraDetails() {
+}
+
+
+void TimedModelChecker::storeInitialState() {
+	TIME_TYPE currentTime = MAX_TIME;
+	for (int r = 0; r < REBEC_COUNT; r++) {
+		if (!rebecs[r]->messageQueue[0])
+			continue;
+		currentTime = currentTime > rebecs[r]->executionTime[0] ? rebecs[r]->executionTime[0] : currentTime;
+	}
+	
+    byte result;
+    TIME_TYPE shift;
+
+	for (int r2 = 0; r2 < REBEC_COUNT; r2++) {
+		 rebecs[r2]->setNow(currentTime);
+	}
+	current = storeRecentlyCreatedState (result, shift, NULL, 0, 0);
+	current.state->stateID = 1;
+	
+    #ifdef EXPORT_STATE_SPACE
+	    statespace << "<transitionsystem>" << endl;
+	    exportState(current, statespace);
+    #endif
+
+    #ifdef DEBUG
+    	out << "The initial state is stored in the state space storage successfully." << endl;
+    #endif
+
+    current.currentTime = currentTime;
+	openBorderQueue.push(current);
+}
+
+void TimedModelChecker::doTimedModelChecking(string userSelectedPropertyName, string userSelectedPropertyType) {
+
+	storeInitialState();
+
+    #ifdef DEBUG
+        out << "Before start state space generation \"while\" loop (The initial state is stored)." << endl;
+    #endif
+
+    while(!openBorderQueue.empty()) {
+
+        TIME_TYPE currentTime = prepareWithNewState();
+	    #ifdef DEBUG
+	        out << "State is unmarshalled and try to find an enabled rebec." << endl;
+	    #endif
+
+	    int highestPriority = std::numeric_limits<int>::max();
+        for (int r = 0; r < REBEC_COUNT; r++) {
+			if (!rebecs[r]->messageQueue[0])
+                continue;
+            TIME_TYPE execTime = (max(rebecs[r]->getNow(), rebecs[r]->executionTime[0]));
+            if (execTime > currentTime) {
+                continue;
+            }
+            highestPriority = min(rebecs[r]->getPriority(), highestPriority);
+		}
+
+        #ifdef PO
+        // POR: try to execute only one safe enabled rebec (ample set = {r}).
+        bool reductionApplied = false;
+        for (int r = 0; r < REBEC_COUNT && !reductionApplied; r++) {
+            if (!rebecs[r]->messageQueue[0]) continue;
+            if (rebecs[r]->getPriority() != highestPriority) continue;
+            TIME_TYPE execTime = (max(rebecs[r]->getNow(), rebecs[r]->executionTime[0]));
+            if (execTime > currentTime) continue;
+            if (areActiveActionsSafe(NULL, r, 0)) {
+                long nonDetTrans;
+                int numberOfAlternatives = getNumberOfAlternatives(r, execTime);
+                for (int alternativesCounter = 0; alternativesCounter < numberOfAlternatives; alternativesCounter++) {
+                    do {
+                        changeOrder(r, alternativesCounter);
+                        if (rebecs[r]->deadline[0] < currentTime) {
+                            throw DeadlineMissedException("Deadline missed.", rebecs[r]);
+                        }
+                        nonDetTrans = executeRebec(r);
+                        unmarshalRebecs(current.state->rebsIndex, current.state->shiftTimes[current.stateActiveBundleNumber].shift);
+                        #ifdef DEBUG_LEVEL_2
+                            out << "<state>" << endl;
+                            for (int cnt = 0; cnt < REBEC_COUNT; cnt++)
+                                rebecs[cnt]->exportStateInXML(out, "\t");
+                            out << "</state>" << endl;
+                        #endif
+                        currentTime = current.currentTime;
+                    } while (nonDetTrans > 0);
+                }
+                reductionApplied = true;
+            }
+        }
+        if (!reductionApplied) {
+        #endif
+
+        for (int r = 0; r < REBEC_COUNT; r++) {
+            if (rebecs[r]->getPriority() != highestPriority)
+            	continue;
+            if (!rebecs[r]->messageQueue[0])
+                continue;
+            TIME_TYPE execTime = (max(rebecs[r]->getNow(), rebecs[r]->executionTime[0]));
+            if (execTime > currentTime) {
+                continue;
+            }
+            long nonDetTrans;
+            int numberOfAlternatives = getNumberOfAlternatives(r, execTime);
+            for(int alternativesCounter = 0; alternativesCounter < numberOfAlternatives; alternativesCounter++) {
+	            do {
+					changeOrder(r, alternativesCounter);
+				    if (rebecs[r]->deadline[0] < currentTime) {
+				        throw DeadlineMissedException("Deadline missed.", rebecs[r]);
+				    }
+	            	nonDetTrans = executeRebec(r);
+					unmarshalRebecs(current.state->rebsIndex, current.state->shiftTimes[current.stateActiveBundleNumber].shift);
+				    #ifdef DEBUG_LEVEL_2
+						out << "<state>" << endl;
+						for (int cnt = 0; cnt < REBEC_COUNT; cnt++)
+							rebecs[cnt]->exportStateInXML(out, "\t");
+						out << "</state>" << endl;
+					#endif
+	                currentTime = current.currentTime;
+	            } while (nonDetTrans > 0);
+            }
+        }
+
+        #ifdef PO
+        } // end if (!reductionApplied)
+        #endif
+    }
+}
+
+long TimedModelChecker::executeRebec(int rebecId) {
+
+	long nonDetTrans;
+    byte result;
+    TIME_TYPE shift;
+
+    #ifdef EXPORT_STATE_SPACE
+        char* actionName = rebecs[rebecId]->activeAction();
+    #endif
+    #ifdef DEBUG
+        out << "Enabled rebec is found. Try to excute message \"" << rebecs[rebecId]->getName() << "::" << rebecs[rebecId]->activeAction() << "\"."<< endl;
+    #endif
+
+    #ifdef EXPORT_STATE_SPACE
+    TIME_TYPE executionTime = rebecs[rebecId]->getNow();
+	string sender = rebecs[rebecs[rebecId]->senderQueue[0]]->getName();
+    #endif
+
+    try {
+		nonDetTrans = rebecs[rebecId]->execute();
+	} catch (QueueOverflowException &e) {
+		e.setCausedBy(rebecs[rebecId]);
+		throw e;
+	}
+    
+    #ifdef DEBUG
+        out << "Message \"" << rebecs[rebecId]->getName() << "::" << rebecs[rebecId]->activeAction() << "\" is executed " 
+        	<< "and the return value is \"" << (long)nonDetTrans << "\"." << endl;
+    #endif
+
+    int nextRebecTime = MAX_TIME;
+    for (int r2 = 0; r2 < REBEC_COUNT; r2++) {
+    	int index = (rebecId == r2 ? 1 : 0);
+		if (rebecs[r2]->messageQueue[index]) {
+            TIME_TYPE rebecNextMessageTime = max(rebecs[r2]->getNow(), rebecs[r2]->executionTime[index]);
+            nextRebecTime = min(rebecNextMessageTime ,nextRebecTime);
+        }
+    }
+
+    for (int r2 = 0; r2 < REBEC_COUNT; r2++) {
+    	if (rebecs[r2]->getNow() < nextRebecTime)
+        	rebecs[r2]->setNow(nextRebecTime);
+    }
+    OpenBorderNode newState = storeRecentlyCreatedState(result, shift, current.state, current.stateActiveBundleNumber, rebecId);
+    try {
+	#foreach($assertion in $propertyAssertions)
+		_propAssert_$assertion.getName() ();
+	#end
+    } catch (AssertionFailedException &e) {
+    	e.setCausedBy(rebecs[rebecId]);
+    	throw;
+	}
+
+    if (nextRebecTime == MAX_TIME) {
+    	current = newState;
+        throw DeadlockException("Deadlock");
+    }
+
+    if (result & NEW_STATE) {
+        newState.currentTime = nextRebecTime;
+
+        openBorderQueue.push(newState);
+        
+	    #ifdef EXPORT_STATE_SPACE
+	    	exportState(newState, statespace);
+	    #endif
+        
+    }
+    #ifdef EXPORT_STATE_SPACE
+    string label = actionName;
+    exportTransition(current, newState, sender, rebecs[rebecId]->getName(), label, executionTime, shift, statespace);
+	#endif
+    return nonDetTrans;
+}
+
+#end

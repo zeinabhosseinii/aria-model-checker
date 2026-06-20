@@ -1,0 +1,52 @@
+#*In the name of Allah*#
+
+#macro (putDefinitionsAndAssertionsSignatures $propertyDefinitions $propertyAssertions)
+    #foreach($definition in $propertyDefinitions)
+    	$definition.getExpression().getType().getTypeName() _propDef_$definition.getName() ();
+    #end
+	#foreach($assertion in $propertyAssertions)
+		void _propAssert_$assertion.getName() ();
+	#end
+#end
+
+#macro (putDefinitionsAndAssertionsBodies $mainDefinition $propertyDefinitions $propertyAssertions $className)
+	#set($cnt = 0)
+	#foreach($instance in $mainDefinition.getMainRebecDefinition())
+		#set($type = $instance.getType().getTypeName())
+		\#define _ref_${instance.getName()} (dynamic_cast<${type}Actor*>(rebecs[$cnt]))
+	    #set($cnt = $cnt + 1)
+	#end
+	
+	#foreach($definition in $propertyDefinitions)
+		$definition.getExpression().getType().getTypeName() $className::_propDef_$definition.getName() () {
+			return $translator.translate($definition.getExpression(), "");
+		}
+	#end
+	
+	#foreach($definition in $propertyDefinitions)
+		\#define _ref_$definition.getName() _propDef_$definition.getName()()
+	#end
+	#foreach($assertion in $propertyAssertions)
+		void $className::_propAssert_$assertion.getName() () {
+			if (!($translator.translate($assertion.getExpression(), "")))
+				throw AssertionFailedException("$assertion.getName()");
+		}
+	#end
+	#foreach($definition in $propertyDefinitions)
+		#undef _ref_$definition.getName()
+	#end
+
+	#foreach($instance in $mainDefinition.getMainRebecDefinition())
+		#undef _ref_${instance.getName()}
+	#end
+#end
+
+#macro (putAtomicPropositions $propertyDefinitions)
+	outStream << "atomicpropositions=\""; 
+	#foreach($definition in $propertyDefinitions)
+		if (_propDef_$definition.getName() ())
+			outStream << "$definition.getName(),"; 
+	#end	
+	outStream << "\" ";
+#end
+

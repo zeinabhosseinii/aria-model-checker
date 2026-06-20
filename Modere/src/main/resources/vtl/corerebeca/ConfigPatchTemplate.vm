@@ -1,0 +1,11 @@
+#*In the name of Allah*#
+
+#macro (addDefinitions)
+class StackOverflowException : public Exception {
+public:
+	StackOverflowException(string message) : Exception(message) {}
+	~StackOverflowException() throw() {}
+};
+
+
+#end

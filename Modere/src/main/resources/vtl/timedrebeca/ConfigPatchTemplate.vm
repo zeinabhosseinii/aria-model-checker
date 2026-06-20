@@ -1,0 +1,23 @@
+#*In the name of Allah*#
+
+#macro (addDefinitions)
+#if($fileGeneratorProperties.isTTS())
+\#define TTS
+#end
+
+#ifdef TTS
+\#define NO_ATOMIC_EXECUTION
+#endif
+\#define TIME_TYPE int
+\#define MAX_TIME 0x7FFFFFFF
+\#define Timer TIME_TYPE
+
+class AbstractActor;
+class DeadlineMissedException: public Exception {
+public:
+	DeadlineMissedException(string message) : Exception(message) {}
+	DeadlineMissedException(string message, AbstractActor* causedBy) : Exception(message, causedBy){} 
+	~DeadlineMissedException() throw() {}
+};
+
+#end

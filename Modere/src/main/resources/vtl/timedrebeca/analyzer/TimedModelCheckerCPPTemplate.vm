@@ -1,0 +1,175 @@
+\#include "TimedModelChecker.h"
+\#include<limits>
+
+#ifdef PROGRESS_REPORT
+
+void TimedModelChecker::progressReport(ostream& reportStream) {
+    AbstractModelChecker::numberOfStates = AbstractTimedRebecaAnalyzer::numberOfStates;
+    AbstractModelChecker::numberOfTransitions = AbstractTimedRebecaAnalyzer::numberOfTransitions;
+	AbstractModelChecker::progressReport(reportStream);
+}
+#endif
+
+TimedModelChecker::TimedModelChecker(ostream &outStream
+	#ifdef EXPORT_STATE_SPACE
+	    , ostream &statespaceStream
+	#endif
+    , int hashmapSize) : AbstractModelChecker(outStream
+	#ifdef EXPORT_STATE_SPACE
+    	, statespaceStream
+	#endif
+	), 
+	AbstractTimedRebecaAnalyzer(outStream, hashmapSize)
+	{
+
+	this->hashmapSize = hashmapSize;
+	current.state = NULL;
+}
+
+string TimedModelChecker::getModelCheckingResultName(int id) {
+	return (
+		id == DEADLINE_MISSED ? "deadline missed" :
+			AbstractModelChecker::getModelCheckingResultName(id)
+		);
+}
+
+long TimedModelChecker::getConsumedMemory() {
+    long totalMem = 0;
+    for (int i=0; i<REBEC_COUNT; i++)
+    	totalMem += rebecs[i]->consumedMemory();
+    totalMem += sizeof(TimedBFSState) * (AbstractTimedRebecaAnalyzer::numberOfStates - AbstractTimedRebecaAnalyzer::numberOfTimedBundles);
+    totalMem += sizeof(RebecsShiftTime) * AbstractTimedRebecaAnalyzer::numberOfTimedBundles;
+    return totalMem;
+}
+
+void TimedModelChecker::printCounterExample(int result, AbstractActor* causedBy) {
+
+	if(!current.state)
+		return;
+
+	string lastStateRebecName, lastStateAction, lastStateSender;
+	TIME_TYPE lastStateTime;
+	if (causedBy != null) {
+	    lastStateRebecName = causedBy->getName();
+	    lastStateAction = causedBy->activeAction();
+	    lastStateSender = rebecs[causedBy->senderQueue[0]]->getName();
+	    lastStateTime = rebecs[causedBy->senderQueue[0]]->getNow();
+	}
+	
+	list<TimedBFSState*> counterExampleStates;
+	TimedBFSState* cursor = current.state;
+	while(cursor) {
+		counterExampleStates.push_front(cursor);
+		cursor = cursor->parents.front().parent;
+	}
+	int cnt = 1;
+	TimedBFSState* parent = NULL;
+	for (list<TimedBFSState*>::iterator it = counterExampleStates.begin(); it != counterExampleStates.end(); it++, cnt++) {
+
+		(*it)->stateID = cnt;
+
+		if (parent != NULL) {
+			parent->stateID = cnt - 1;
+			printCounterExampleTransition(parent, *it);
+		}
+
+		unmarshalRebecs((*it)->rebsIndex, 
+    		(*it)->shiftTimes[(*it)->parents.front().timeBundleIndex].shift);
+    	
+    	OpenBorderNode child;
+    	child.state = (*it);
+		child.stateActiveBundleNumber = 0;
+
+		exportState(child, out);    	
+		
+		parent = *it;
+	}
+	if (causedBy != null) {
+	    string terminationStateName = "end";
+		switch(result) {
+			case ASSERTION_FAILED: terminationStateName = "assertion failed"; break; 
+			case DEADLOCK: terminationStateName = "deadlock"; break; 
+			case QUEUE_OVERFLOW: terminationStateName = "queue overflow"; break; 
+			case DEADLINE_MISSED: terminationStateName = "deadline missed"; break; 
+		}
+		list<TimedBFSState*>::iterator last = counterExampleStates.end();
+		last--;
+		string sourceName = to_string((*last)->stateID) + "_0" ;
+		exportTransition(sourceName, terminationStateName, lastStateSender, lastStateRebecName, lastStateAction, lastStateTime, 0, out);
+		out << "<state id=\"" << terminationStateName << "\" atomicpropositions=\"" << terminationStateName << "\">" << endl << "</state>" << endl;
+	}
+	
+}
+
+void TimedModelChecker::exportModelCheckingResult(string userSelectedPropertyName, string userSelectedPropertyType,
+	int result, string message, AbstractActor* causedBy) {
+
+    AbstractModelChecker::numberOfStates = AbstractTimedRebecaAnalyzer::numberOfStates;
+    AbstractModelChecker::numberOfTransitions = AbstractTimedRebecaAnalyzer::numberOfTransitions;
+
+    out  <<  "<model-checking-report>"  <<  std::endl;
+
+	exportModelCheckingDetails(userSelectedPropertyName, userSelectedPropertyType, result, message);
+	exportModelCheckingReportExtraDetails();
+    out  <<  "<counter-example-trace>"  <<  std::endl;
+	if (result != HEAP_OVERFLOW && result != SATISFIED)
+		printCounterExample(result, causedBy);
+    out  <<  "</counter-example-trace>"  <<  std::endl;
+    out  <<  "</model-checking-report>"  <<  std::endl;
+}
+
+void TimedModelChecker::doModelChecking(string userSelectedPropertyName, string userSelectedPropertyType) {
+	vector<AbstractActor*> referenceToRebecs;
+	try {
+		AbstractModelChecker::doModelChecking(userSelectedPropertyName, userSelectedPropertyType);
+
+	    bfsStorage = new TimedRebecaBFSHashmap(hashmapSize, out);
+	    #ifdef DEBUG
+	    	out << "State space storage is created successfully." << endl;
+	    #endif
+
+		instantiationPart();	    
+
+		doTimedModelChecking(userSelectedPropertyName, userSelectedPropertyType);
+	    exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	SATISFIED, "", null);
+	    	
+    } catch (AssertionFailedException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	ASSERTION_FAILED, e.getMessage(), e.getCausedBy());
+    } catch (DeadlockException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	DEADLOCK, "", e.getCausedBy());
+    } catch (QueueOverflowException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	QUEUE_OVERFLOW, "", e.getCausedBy());
+    } catch (CounterExampleException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	COUNTER_EXAMPLE, "", null);
+    } catch (UnknownPropertyException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	UNKNOWN_PROPERTY, e.getMessage(), null);
+    } catch (DeadlineMissedException &e) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	DEADLINE_MISSED, "", e.getCausedBy());
+    } catch (...) {
+    	exportModelCheckingResult(userSelectedPropertyName, userSelectedPropertyType,
+	    	HEAP_OVERFLOW, "", null);
+    }
+
+    #ifdef EXPORT_STATE_SPACE
+	    statespace << "</transitionsystem>" << endl;
+	    statespace.flush();
+	#endif
+
+}
+
+void TimedModelChecker::segmentationFault() {
+	exportModelCheckingResult("", "", SEGMENTATION_FAULT, NULL, null);
+	#ifdef EXPORT_STATE_SPACE
+	    statespace << "</transitionsystem>" << endl;
+	    statespace.flush();
+	#endif
+}
+
+#applyPatch($patches 'AdditionalBodies' false)
