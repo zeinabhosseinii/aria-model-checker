@@ -1,0 +1,10 @@
+graph RIG {
+  rankdir=LR;
+  "Tower" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Alpha" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Beta" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Gamma" [shape=ellipse, style=filled, fillcolor=lightblue];
+  "Alpha" -- "Beta";
+  "Alpha" -- "Gamma";
+  "Beta" -- "Gamma";
+}
