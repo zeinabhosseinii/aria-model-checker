@@ -58,9 +58,9 @@ Output goes to `output/<ModelName>/`:
 | TicketService (2 customers) | 34 | 18 | 33% | Deadlock |
 | TicketService (3 customers) | 126 | 45 | 64% | Deadlock |
 | BankTransfer | 5,026 | 2,381 | 52% | Deadlock |
-| ResourceManager | 5,069 | 2,655 | 47% | — |
+| ResourceManager | 143,978 | 46,759 | 67% | — |
 | LoadBalancer | 992 | 362 | 63% | — |
-| SlotGuard | 121,946 | 46,532 | 62% | — |
+| SlotGuard | 3,521,765 | 919,634 | 74% | — |
 | GradientSync | 1,313 | 584 | 55% | Queue Overflow |
 | ImageProcessor | 1,144 | 660 | 42% | Queue Overflow |
 | RequestPipeline | 2,214 | 1,091 | 50% | Assertion Violation |
