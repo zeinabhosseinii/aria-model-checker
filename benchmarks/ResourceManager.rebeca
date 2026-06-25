@@ -3,6 +3,7 @@ reactiveclass ResourceManager(6)
 knownrebecs {
     AppMaster am1;
     AppMaster am2;
+    AppMaster am3;
 }
 
 statevars {
@@ -10,6 +11,7 @@ statevars {
     int BUSY;
     int appMaster1;
     int appMaster2;
+    int appMaster3;
     int m_queue_misses;
     int m_update_miss;
     int m_job_complete;
@@ -23,6 +25,7 @@ ResourceManager() {
     BUSY = 0;
     appMaster1 = FREE;
     appMaster2 = FREE;
+    appMaster3 = FREE;
     m_queue_misses = 0;
     m_update_miss = 0;
     m_job_complete = 0;
@@ -43,11 +46,15 @@ msgsrv update(boolean deadline_miss) {
     } else {
         m_job_complete = 1;
     }
+    
     if(sender == am1) {
         appMaster1 = FREE;
     }
     else if(sender == am2) {
         appMaster2 = FREE;
+    }
+    else if(sender == am3) {
+        appMaster3 = FREE;
     }
 }
 
@@ -57,6 +64,7 @@ msgsrv checkQueue() {
     m_job_complete = 0;
     int I = 0;
 
+    // بررسی آزاد بودن و تخصیص کار به هر کدام از ۳ AppMaster
     if(appMaster1 == FREE) {
         appMaster1 = BUSY;
         am1.runJob(fifo_queue[0]);
@@ -67,9 +75,21 @@ msgsrv checkQueue() {
         }
         fifo_queue[QUEUE_SIZE - 1] = DEFAULT_DEADLINE;
     }
+    
     if(appMaster2 == FREE) {
         appMaster2 = BUSY;
         am2.runJob(fifo_queue[0]);
+        I = 0;
+        while(I < QUEUE_SIZE - 1) {
+            fifo_queue[I] = fifo_queue[I + 1];
+            I++;
+        }
+        fifo_queue[QUEUE_SIZE - 1] = DEFAULT_DEADLINE;
+    }
+
+    if(appMaster3 == FREE) {
+        appMaster3 = BUSY;
+        am3.runJob(fifo_queue[0]);
         I = 0;
         while(I < QUEUE_SIZE - 1) {
             fifo_queue[I] = fifo_queue[I + 1];
@@ -95,7 +115,6 @@ msgsrv checkQueue() {
     }
     self.checkQueue();
 }
-
 }
 
 reactiveclass AppMaster(5)
@@ -129,7 +148,8 @@ msgsrv runJob(int dline) {
 }}
 
 main {
-    ResourceManager rm(am1, am2):();
+    ResourceManager rm(am1, am2, am3):();
     AppMaster am1(rm):();
     AppMaster am2(rm):();
+    AppMaster am3(rm):();
 }
